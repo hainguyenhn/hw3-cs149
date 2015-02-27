@@ -47,6 +47,13 @@ int firstPrint = 1;
 //   who is waiting in the chairs
 //   what event occurred
 
+struct studentStruct{
+    int id;
+    char* priority;
+    time_t arrivalTime;
+    time_t leaveTime;
+};
+
 void print(char *event)
 {
     time_t now;
