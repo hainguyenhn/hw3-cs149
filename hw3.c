@@ -214,9 +214,30 @@ void timerHandler(int signal)
     timesUp = 1;  // office hour is over
 }
 
+//random Priority Generator
+char* priorityGenerator(){
+	char* priority[] = {"GS","RS","EE"};
+	int temp = 0;
+	time_t t;
+	srand((unsigned) time(&t));
+	temp = rand()%3;
+	if(temp <1){
+		return priority[0];
+	}
+	else{
+		if(temp > 1){
+			return priority[1];
+		}
+		else{
+			return priority[2];
+		}
+	}
+}
+
 // Main.
 int main(int argc, char *argv[])
 {
+
     int studentIds[STUDENT_COUNT];
     int professorId = 0;
 
@@ -271,4 +292,3 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-haha
