@@ -47,12 +47,6 @@ int firstPrint = 1;
 //   who is waiting in the chairs
 //   what event occurred
 
-struct student{
-	int id;
-	char priority[2];
-	int turnAround;
-};
-
 void print(char *event)
 {
     time_t now;
@@ -274,6 +268,7 @@ int main(int argc, char *argv[])
     printf("%5d students met with Prof. Fore\n", meetingsCount);
     printf("%5d students left without meeting\n", leavesCount);
     printf("%5d times Prof. Fore worked on ParFore\n", parforeCount);
-
     return 0;
 }
+
+haha
