@@ -39,6 +39,7 @@ pthread_mutex_t EeQueueMutex;  // mutex protects chairs and wait count
 pthread_mutex_t sectionMutex;  // mutex protects chairs and wait count
 pthread_mutex_t printMutex;  // mutex protects printing
 pthread_mutex_t impatientMutex;
+pthread_mutex_t dropListMutex;
 
 sem_t GsQueueSem;
 sem_t RsQueueSem;
@@ -71,6 +72,7 @@ int queueProcessed[3] = {0,0,0};
 
 //keep track of student
 struct studentStruct droppedList[STUDENT_COUNT];
+int drop[STUDENT_COUNT];
 int dropStudentCount = 0;
 
 // keep track of impatient student left
@@ -222,7 +224,9 @@ void professorMeetsStudent(int queueNum)
 			}
 			else{
 				sprintf(event, "Student #%d.%s is dropped",  temp -> id, temp -> priority);
+				pthread_mutex_lock(&dropListMutex);
 				droppedList[dropStudentCount++] = *(temp);
+				pthread_mutex_unlock(&dropListMutex);
 				print(event);
 			}
 			studentProcessed++;
@@ -270,7 +274,9 @@ void professorMeetsStudent(int queueNum)
 			}
 			else{
 				sprintf(event, "Student #%d.%s is dropped",  temp -> id, temp -> priority);
+				pthread_mutex_lock(&dropListMutex);
 				droppedList[dropStudentCount++] = *(temp);
+				pthread_mutex_unlock(&dropListMutex);
 				print(event);
 			}
 			studentProcessed++;
@@ -318,7 +324,9 @@ void professorMeetsStudent(int queueNum)
 			}
 			else{
 				sprintf(event, "Student #%d.%s is dropped",  temp -> id, temp -> priority);
+				pthread_mutex_lock(&dropListMutex);
 				droppedList[dropStudentCount++] = *(temp);
+				pthread_mutex_unlock(&dropListMutex);
 				print(event);
 			}
 			studentProcessed++;
@@ -468,7 +476,9 @@ void handleImpatientStudent(struct studentStruct* student,int time, int queueNum
 	sprintf(event, "Student #%d.%s can't wait anymore and left %s queue",  student -> id, student -> priority, priority[queueNum]);
 	print(event);
 	student->leaveTime = time;
-	impatientList[impatientStudentCount++] = *(student);
+	impatientList[impatientStudentCount++] = *student;
+	drop[impatientStudentCount-1] = impatientList[impatientStudentCount-1].id;
+	printf("hehe %d",impatientList[impatientStudentCount-1].id);
 	studentProcessed++;
 	pthread_mutex_unlock(&impatientMutex);
 }
@@ -485,6 +495,7 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&EeQueueMutex, NULL);
 	pthread_mutex_init(&sectionMutex, NULL);
 	pthread_mutex_init(&impatientMutex, NULL);
+	pthread_mutex_init(&dropListMutex, NULL);
 
 	sem_init(&filledChairs, 0, 0);
 	sem_init(&GsQueueSem, 0, 0);
@@ -549,17 +560,14 @@ int main(int argc, char *argv[])
 		printf("Queue %s has average turn around time of %.2f seconds\n", priority[0], queueTurnAround[o]);
 	}
 
-	printf("hello world\n");
 
 	for(o = 0; o < dropStudentCount; o++){
-		printf("Student #%d%s was dropped.\n",droppedList[i].id,droppedList[i].priority);
+		printf("Student #%d%s was dropped.\n",droppedList[o].id,droppedList[o].priority);
 	}
 
-	printf("hello world1\n");
 	printf("student count %d", impatientStudentCount);
 	for(o = 0; o < impatientStudentCount; o++){
-			printf("Student #%d%s was impatient and left.\n",impatientList[i].id,impatientList[i].priority);
+			printf("Student #%d%s was impatient and left.\n",impatientList[o].id,impatientList[o].priority);
 		}
-	printf("hello world2\n");
 	return 0;
 }
