@@ -475,7 +475,6 @@ void handleImpatientStudent(struct studentStruct* student,int time, int queueNum
 	print(event);
 	student->leaveTime = time;
 	impatientList[impatientStudentCount++] = *student;
-	studentProcessed++;
 	pthread_mutex_unlock(&impatientMutex);
 }
 
