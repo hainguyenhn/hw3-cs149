@@ -11,6 +11,9 @@
 #define CHAIR_COUNT 3
 #define STUDENT_COUNT 75
 #define SECTION_COUNT 3
+#define GS 0
+#define RS 1
+#define EE 2
 
 #define NUMBER_OF_SECTION 3
 #define SECTION_CAPACITY 20
@@ -35,6 +38,7 @@ pthread_mutex_t RsQueueMutex;  // mutex protects chairs and wait count
 pthread_mutex_t EeQueueMutex;  // mutex protects chairs and wait count
 pthread_mutex_t sectionMutex;  // mutex protects chairs and wait count
 pthread_mutex_t printMutex;  // mutex protects printing
+pthread_mutex_t impatientMutex;
 
 sem_t GsQueueSem;
 sem_t RsQueueSem;
@@ -90,6 +94,7 @@ int firstPrint = 1;
 int allSectionFull();
 int completed();
 void closeAllQueue();
+void handleImpatientStudent(struct studentStruct* student,int time, int queueNum);
 
 
 void print(char *event)
@@ -191,11 +196,7 @@ void professorMeetsStudent(int queueNum)
 			time_t elapsed;
 			time(&elapsed);
 			if((elapsed - temp->arrivalTime) >= 10){
-				sprintf(event, "Student #%d.%s can't wait anymore and left Gs queue",  temp -> id, temp -> priority);
-				temp->leaveTime = elapsed;
-				impatientList[impatientStudentCount++] = *(temp);
-				studentProcessed++;
-				print(event);
+				handleImpatientStudent(temp,elapsed,GS);
 			}
 			else{
 			sprintf(event, "Student #%d.%s is being process at Gs queue",  temp -> id, temp -> priority);
@@ -215,7 +216,7 @@ void professorMeetsStudent(int queueNum)
 			int enroll;
 			enroll = enrollStudent(temp);
 			if(enroll != -1){
-				sprintf(event, "Student #%d.%s is enrolled into Section %d",  temp -> id, temp -> priority, enroll );
+				sprintf(event, "Student #%d.%s is enrolled into Section %d",  temp -> id, temp -> priority, enroll +1 );
 				printf("Section %d has %d students\n", enroll + 1, sectionCounts[enroll]);
 				print(event);
 			}
@@ -243,11 +244,7 @@ void professorMeetsStudent(int queueNum)
 			time_t elapsed;
 						time(&elapsed);
 							if((elapsed - temp->arrivalTime) >= 10){
-							sprintf(event, "Student #%d.%s can't wait anymore and left Rs queue",  temp -> id, temp -> priority);
-							temp->leaveTime = elapsed;
-							impatientList[impatientStudentCount++] = *(temp);
-							studentProcessed++;
-							print(event);
+								handleImpatientStudent(temp,elapsed,RS);
 						}
 						else{
 			sprintf(event, "Student #%d.%s is being process at RS queue",  temp -> id, temp -> priority);
@@ -267,7 +264,7 @@ void professorMeetsStudent(int queueNum)
 			int enroll1;
 			enroll1 = enrollStudent(temp);
 			if(enroll1 != -1){
-				sprintf(event, "Student #%d.%s is enrolled into Section %d",  temp -> id, temp -> priority, enroll1 );
+				sprintf(event, "Student #%d.%s is enrolled into Section %d",  temp -> id, temp -> priority, enroll1 +1);
 				printf("Section %d has %d students\n", enroll1 + 1, sectionCounts[enroll1]);
 				print(event);
 			}
@@ -295,11 +292,7 @@ void professorMeetsStudent(int queueNum)
 			time_t elapsed;
 						time(&elapsed);
 							if((elapsed - temp->arrivalTime) >= 10){
-							sprintf(event, "Student #%d.%s can't wait anymore and left EE queue",  temp -> id, temp -> priority);
-							temp->leaveTime = elapsed;
-							impatientList[impatientStudentCount++] = *(temp);
-							studentProcessed++;
-							print(event);
+								handleImpatientStudent(temp,elapsed,EE);
 						}
 						else{
 			sprintf(event, "Student #%d.%s is being process at EE queue",  temp -> id, temp -> priority);
@@ -319,7 +312,7 @@ void professorMeetsStudent(int queueNum)
 			int enroll2;
 			enroll2 = enrollStudent(temp);
 			if(enroll2 != -1){
-				sprintf(event, "Student #%d.%s is enrolled into Section %d",  temp -> id, temp -> priority, enroll2 );
+				sprintf(event, "Student #%d.%s is enrolled into Section %d",  temp -> id, temp -> priority, enroll2 +1 );
 				printf("Section %d has %d students\n", enroll2 + 1, sectionCounts[enroll2]);
 				print(event);
 			}
@@ -469,6 +462,17 @@ int enrollStudent(struct studentStruct* student){
 }
 
 
+void handleImpatientStudent(struct studentStruct* student,int time, int queueNum){
+	pthread_mutex_lock(&impatientMutex);
+	char event[80];
+	sprintf(event, "Student #%d.%s can't wait anymore and left %s queue",  student -> id, student -> priority, priority[queueNum]);
+	print(event);
+	student->leaveTime = time;
+	impatientList[impatientStudentCount++] = *(student);
+	studentProcessed++;
+	pthread_mutex_unlock(&impatientMutex);
+}
+
 // Main.
 int main(int argc, char *argv[])
 {
@@ -480,6 +484,7 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&RsQueueMutex, NULL);
 	pthread_mutex_init(&EeQueueMutex, NULL);
 	pthread_mutex_init(&sectionMutex, NULL);
+	pthread_mutex_init(&impatientMutex, NULL);
 
 	sem_init(&filledChairs, 0, 0);
 	sem_init(&GsQueueSem, 0, 0);
@@ -499,13 +504,13 @@ int main(int argc, char *argv[])
 	pthread_t professorThreadId1;
 	pthread_attr_t profAttr1;
 	pthread_attr_init(&profAttr1);
-	pthread_create(&professorThreadId1, &profAttr1, professor, professorId+1);
+	pthread_create(&professorThreadId1, &profAttr1, professor, (professorId)+1);
 
 	// Create the professor thread.
 	pthread_t professorThreadId2;
 	pthread_attr_t profAttr2;
 	pthread_attr_init(&profAttr2);
-	pthread_create(&professorThreadId2, &profAttr2, professor, professorId+2);
+	pthread_create(&professorThreadId2, &profAttr2, professor, (professorId+2));
 
 
 	struct studentStruct studentList[STUDENT_COUNT];
@@ -544,14 +549,17 @@ int main(int argc, char *argv[])
 		printf("Queue %s has average turn around time of %.2f seconds\n", priority[0], queueTurnAround[o]);
 	}
 
+	printf("hello world\n");
+
 	for(o = 0; o < dropStudentCount; o++){
 		printf("Student #%d%s was dropped.\n",droppedList[i].id,droppedList[i].priority);
 	}
 
+	printf("hello world1\n");
 	printf("student count %d", impatientStudentCount);
 	for(o = 0; o < impatientStudentCount; o++){
 			printf("Student #%d%s was impatient and left.\n",impatientList[i].id,impatientList[i].priority);
 		}
-
+	printf("hello world2\n");
 	return 0;
 }
