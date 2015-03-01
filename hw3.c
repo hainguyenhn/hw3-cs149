@@ -26,15 +26,16 @@ struct studentStruct{
 struct studentStruct GsQueue[STUDENT_COUNT];
 struct studentStruct RsQueue[STUDENT_COUNT];
 struct studentStruct EeQueue[STUDENT_COUNT];
-struct studentStruct sections[NUMBER_OF_SECTION][SECTION_CAPACITY];
-
+struct studentStruct section1[SECTION_CAPACITY];
+struct studentStruct section2[SECTION_CAPACITY];
+struct studentStruct section3[SECTION_CAPACITY];
 
 char* priority[] = {"GS","RS","EE"};
 
 pthread_mutex_t GsQueueMutex;  // mutex protects Gs queue.
 pthread_mutex_t RsQueueMutex;  // mutex protects Rs queue.
 pthread_mutex_t EeQueueMutex;  // mutex protects EE queue.
-pthread_mutex_t sectionMutex;  // mutex protects section queues.
+pthread_mutex_t sectionsMutex[3]; //mutex protects sections.
 pthread_mutex_t printMutex;  // mutex protects printing
 pthread_mutex_t impatientMutex; // mutex protects impatient student queue.
 pthread_mutex_t dropListMutex; // mutex protect drop student queue.
@@ -43,21 +44,8 @@ sem_t GsQueueSem;
 sem_t RsQueueSem;
 sem_t EeQueueSem;
 
-
 struct itimerval profTimer;  // professor's office hour timer
 time_t startTime;
-
-
-int arrivalsCount = 0;
-int waitCount = 0;
-int leavesCount = 0;
-int meetingsCount = 0;
-int parforeCount = 0;
-
-
-int section1[SECTION_CAPACITY];
-int section2[SECTION_CAPACITY];
-int section3[SECTION_CAPACITY];
 
 //keep track of number of students in each sections.
 int sectionCounts[3] = {0,0,0};
@@ -84,6 +72,9 @@ int EeQueuePOS = 0;
 //total number of students has been processed.
 int studentProcessed = 0;
 
+//queue close signal
+int queueOpen = 1;
+
 int firstPrint = 1;
 
 //function declarations.
@@ -91,7 +82,6 @@ int allSectionFull();
 int completed();
 void closeAllQueue();
 void handleImpatientStudent(struct studentStruct* student,int time, int queueNum);
-
 
 void print(char *event)
 {
@@ -129,7 +119,8 @@ void studentArrives(struct studentStruct* student)
 	int id = (int)student->id;
 	char* priority = (char*) student->priority;
 	char event[100];
-	arrivalsCount++;
+
+	if(queueOpen != 0){
 
 	if(strcmp(priority,"GS") == 0){
 		pthread_mutex_lock(&GsQueueMutex);
@@ -156,9 +147,12 @@ void studentArrives(struct studentStruct* student)
 			sprintf(event, "Student #%d.%s arrives Ee Queue and waits", id, priority);
 			print(event);
 			sem_post(&EeQueueSem);
-		}
+
 	}
+	}}
 }
+
+
 
 // The student thread.
 void *student(struct studentStruct *student)
@@ -173,9 +167,8 @@ void *student(struct studentStruct *student)
 	return NULL;
 }
 
-
-// The professor meets a student (or works on ParFore).
-void professorMeetsStudent(int queueNum)
+//queue process
+void queueProcess(int queueNum)
 {
 	int queue = queueNum;
 	switch(queue){
@@ -231,7 +224,6 @@ void professorMeetsStudent(int queueNum)
 	case 2:
 		sem_wait(&RsQueueSem);
 		if((allSectionFull() != 1) && (studentProcessed < STUDENT_COUNT) && (queueProcessed[1] < RsQueuePOS)){
-
 			pthread_mutex_lock(&RsQueueMutex);
 			struct studentStruct* temp = &RsQueue[queueProcessed[1]++];
 			pthread_mutex_unlock(&RsQueueMutex);
@@ -244,7 +236,6 @@ void professorMeetsStudent(int queueNum)
 			else{
 				sprintf(event, "Student #%d.%s is being process at RS queue",  temp -> id, temp -> priority);
 				print(event);
-
 
 				int processTime = rand()%3 + 2;
 				queueTurnAround[1] += processTime;
@@ -281,7 +272,6 @@ void professorMeetsStudent(int queueNum)
 	case 3:
 		sem_wait(&EeQueueSem);
 		if((allSectionFull() != 1) && (studentProcessed < STUDENT_COUNT) && (queueProcessed[2] < EeQueuePOS)){
-
 			pthread_mutex_lock(&EeQueueMutex);
 			struct studentStruct* temp = &EeQueue[queueProcessed[2]++];
 			pthread_mutex_unlock(&EeQueueMutex);
@@ -295,7 +285,6 @@ void professorMeetsStudent(int queueNum)
 			else{
 				sprintf(event, "Student #%d.%s is being process at EE queue",  temp -> id, temp -> priority);
 				print(event);
-
 
 				int processTime = rand()%4 + 3;
 				queueTurnAround[2] += processTime;
@@ -330,16 +319,15 @@ void professorMeetsStudent(int queueNum)
 		break;
 	}}
 
-
 // The queue thread.
 void *queue(int param)
 {
 	int queue =  param;
 	switch(queue){
 	case 1:
-		print("GS Queue is open");
+		print("RS Queue is open");
 		do{
-			professorMeetsStudent(1);
+			queueProcess(1);
 		} while (completed() != 1);
 		print("GS Queue is closed");
 		closeAllQueue();
@@ -349,7 +337,7 @@ void *queue(int param)
 	case 2:
 		print("RS Queue is open");
 		do{
-			professorMeetsStudent(2);
+			queueProcess(2);
 		} while (completed() != 1);
 		print("RS Queue is closed");
 		closeAllQueue();
@@ -359,7 +347,7 @@ void *queue(int param)
 	case 3:
 		print("EE Queue is open");
 		do{
-			professorMeetsStudent(3);
+			queueProcess(3);
 		} while  (completed() != 1);
 		print("EE Queue is closed");
 		closeAllQueue();
@@ -370,7 +358,6 @@ void *queue(int param)
 
 //random Priority Generator
 char* priorityGenerator(){
-	char* priority[] = {"GS","RS","EE"};
 	int temp;
 	temp = rand() % 3;
 	switch(temp){
@@ -388,7 +375,7 @@ char* priorityGenerator(){
 }
 
 //random section generator
-// section 0 meaning student can enroll any sections 1,2,3 with equal probability.
+// section 3 meaning student can enroll any sections 1,2,3 with equal probability.
 int sectionGenerator(){
 	int temp;
 	temp = (int) rand()%4;
@@ -409,6 +396,7 @@ int sectionGenerator(){
 	return -1;
 }
 
+//check all 3 sections for availability.
 int allSectionFull(){
 	int i;
 	for(i = 0; i < NUMBER_OF_SECTION; i++){
@@ -419,12 +407,15 @@ int allSectionFull(){
 	return 1;
 }
 
+//handle close all queues, signal semaphore.
 void closeAllQueue(){
 	sem_post(&GsQueueSem);
 	sem_post(&RsQueueSem);
 	sem_post(&EeQueueSem);
+	queueOpen = 0;
 }
 
+//complete if all students are processed or all sections are full.
 int completed(){
 	if((studentProcessed >= STUDENT_COUNT) || (allSectionFull() == 1)){
 		return 1;
@@ -434,10 +425,11 @@ int completed(){
 	}
 }
 
+//enroll student into thier section.
 int enrollStudent(struct studentStruct* student){
-	pthread_mutex_lock(&sectionMutex);
 	int studentSec = student -> section;
-	if(studentSec == 0){
+	//studentsec == 3, meaning can enroll into any section.
+	if(studentSec == 3){
 		int i;
 		for(i = 0; i < NUMBER_OF_SECTION; i++){
 			if(sectionCounts[i] < SECTION_CAPACITY){
@@ -445,20 +437,37 @@ int enrollStudent(struct studentStruct* student){
 			}
 		}
 	}
-	//because array start at 0.
-	studentSec--;
+
+	//check each queue for availability and lock corresponding section queue.
 	if(sectionCounts[studentSec] < SECTION_CAPACITY){
-		sections[studentSec][sectionCounts[studentSec]++] = *(student);
-		pthread_mutex_unlock(&sectionMutex);
-		return studentSec;
+		switch(studentSec){
+		case 0:
+			pthread_mutex_lock(&sectionsMutex[studentSec]);
+			section1[sectionCounts[studentSec]++] = *(student);
+			pthread_mutex_unlock(&sectionsMutex[studentSec]);
+			return studentSec;
+			break;
+		case 1:
+			pthread_mutex_lock(&sectionsMutex[studentSec]);
+			section2[sectionCounts[studentSec]++] = *(student);
+			pthread_mutex_unlock(&sectionsMutex[studentSec]);
+			return studentSec;
+			break;
+		case 2:
+			pthread_mutex_lock(&sectionsMutex[studentSec]);
+			section3[sectionCounts[studentSec]++] = *(student);
+			pthread_mutex_unlock(&sectionsMutex[studentSec]);
+			return studentSec;
+			break;
+		}
 	}
 	else{
-		pthread_mutex_unlock(&sectionMutex);
+		pthread_mutex_unlock(&sectionsMutex[studentSec]);
 		return -1;
 	}
 }
 
-
+//handle impatient student who leave after wait for 10 seconds
 void handleImpatientStudent(struct studentStruct* student,int time, int queueNum){
 	pthread_mutex_lock(&impatientMutex);
 	char event[80];
@@ -480,7 +489,9 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&GsQueueMutex, NULL);
 	pthread_mutex_init(&RsQueueMutex, NULL);
 	pthread_mutex_init(&EeQueueMutex, NULL);
-	pthread_mutex_init(&sectionMutex, NULL);
+	pthread_mutex_init(&sectionsMutex[0], NULL);
+	pthread_mutex_init(&sectionsMutex[1], NULL);
+	pthread_mutex_init(&sectionsMutex[2], NULL);
 	pthread_mutex_init(&impatientMutex, NULL);
 	pthread_mutex_init(&dropListMutex, NULL);
 
@@ -502,15 +513,13 @@ int main(int argc, char *argv[])
 	pthread_attr_init(&queueAtr1);
 	pthread_create(&queueThreadId1, &queueAtr1, queue, (queueId)+1);
 
-	// Create the professor thread.
 	pthread_t queueThreadId2;
 	pthread_attr_t queueAtr2;
 	pthread_attr_init(&queueAtr2);
 	pthread_create(&queueThreadId2, &queueAtr2, queue, (queueId+2));
 
-
-	struct studentStruct studentList[STUDENT_COUNT];
 	// Create the student threads.
+	struct studentStruct studentList[STUDENT_COUNT];
 	int i;
 	for (i = 0; i < STUDENT_COUNT; i++) {
 		studentList[i].id = ID_BASE + i;
@@ -532,20 +541,29 @@ int main(int argc, char *argv[])
 
 	int o,p;
 	//print number of students per section.
-	for (o = 0; o < NUMBER_OF_SECTION;o++){
-		for(p = 0; p < sectionCounts[o]; p++){
-			int temp = sections[o][p].leaveTime - sections[o][p].arrivalTime;
-			printf("Section %d has student ID: %d%s students, arrival time %d, leave time %d, turn around %d \n",
-					o+1, sections[o][p].id, sections[o][p].priority,sections[o][p].arrivalTime, sections[o][p].leaveTime,temp );
-
-		}
-		printf("---\n");
+	for(p = 0; p < sectionCounts[o]; p++){
+		int temp = section1 -> leaveTime - section1 -> arrivalTime;
+		printf("Section %d has student ID: %d%s students, arrival time %d, leave time %d, turn around %d \n",
+				1, section1[o].id, section1[o].priority,section1[o].arrivalTime, section1[o].leaveTime,temp );
 	}
+	printf("---\n");
+	for(p = 0; p < sectionCounts[1]; p++){
+		int temp = section2 -> leaveTime - section2 -> arrivalTime;
+		printf("Section %d has student ID: %d%s students, arrival time %d, leave time %d, turn around %d \n",
+				2, section2[o].id, section2[o].priority,section2[o].arrivalTime, section2[o].leaveTime,temp );
+	}
+	printf("---\n");
+	for(p = 0; p < sectionCounts[2]; p++){
+		int temp = section3 -> leaveTime - section3 -> arrivalTime;
+		printf("Section %d has student ID: %d%s students, arrival time %d, leave time %d, turn around %d \n",
+				3, section3[o].id, section3[o].priority,section3[o].arrivalTime, section3[o].leaveTime,temp );
+	}
+	printf("---\n");
 
 	//print queues's turn around
 	for(o = 0; o < NUMBER_OF_SECTION; o++){
 		queueTurnAround[o] /= queueProcessed[o];
-		printf("Queue %s has average turn around time of %.2f seconds\n", priority[0], queueTurnAround[o]);
+		printf("Queue %s has average turn around time of %.2f seconds\n", priority[o], queueTurnAround[o]);
 	}
 
 	//print students who were dropped
@@ -554,7 +572,6 @@ int main(int argc, char *argv[])
 	}
 
 	//print impatient students who left
-	printf("student count %d", impatientStudentCount);
 	for(o = 0; o < impatientStudentCount; o++){
 		printf("Student #%d%s was impatient and left.\n",impatientList[o].id,impatientList[o].priority);
 	}
