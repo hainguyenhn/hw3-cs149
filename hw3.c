@@ -122,34 +122,34 @@ void studentArrives(struct studentStruct* student)
 
 	if(queueOpen != 0){
 
-	if(strcmp(priority,"GS") == 0){
-		pthread_mutex_lock(&GsQueueMutex);
-		GsQueue[GsQueuePOS++] = *student;
-		pthread_mutex_unlock(&GsQueueMutex);
-		sprintf(event, "Student #%d.%s arrives Gs Queue and waits", id,priority);
-		print(event);
-		sem_post(&GsQueueSem);
-	}
-	else{
-		if(strcmp(priority,"RS") == 0){
-			pthread_mutex_lock(&RsQueueMutex);
-			RsQueue[RsQueuePOS++] = *student;
-			pthread_mutex_unlock(&RsQueueMutex);
-			sprintf(event, "Student #%d.%s arrives Rs Queue and waits", id, priority);
+		if(strcmp(priority,"GS") == 0){
+			pthread_mutex_lock(&GsQueueMutex);
+			GsQueue[GsQueuePOS++] = *student;
+			pthread_mutex_unlock(&GsQueueMutex);
+			sprintf(event, "Student #%d.%s arrives Gs Queue and waits", id,priority);
 			print(event);
-			sem_post(&RsQueueSem);
-
+			sem_post(&GsQueueSem);
 		}
 		else{
-			pthread_mutex_lock(&EeQueueMutex);
-			EeQueue[EeQueuePOS++] = *student;
-			pthread_mutex_unlock(&EeQueueMutex);
-			sprintf(event, "Student #%d.%s arrives Ee Queue and waits", id, priority);
-			print(event);
-			sem_post(&EeQueueSem);
+			if(strcmp(priority,"RS") == 0){
+				pthread_mutex_lock(&RsQueueMutex);
+				RsQueue[RsQueuePOS++] = *student;
+				pthread_mutex_unlock(&RsQueueMutex);
+				sprintf(event, "Student #%d.%s arrives Rs Queue and waits", id, priority);
+				print(event);
+				sem_post(&RsQueueSem);
 
-	}
-	}}
+			}
+			else{
+				pthread_mutex_lock(&EeQueueMutex);
+				EeQueue[EeQueuePOS++] = *student;
+				pthread_mutex_unlock(&EeQueueMutex);
+				sprintf(event, "Student #%d.%s arrives Ee Queue and waits", id, priority);
+				print(event);
+				sem_post(&EeQueueSem);
+
+			}
+		}}
 }
 
 
@@ -542,19 +542,19 @@ int main(int argc, char *argv[])
 	int o,p;
 	//print number of students per section.
 	for(p = 0; p < sectionCounts[0]; p++){
-		int temp = section1 -> leaveTime - section1 -> arrivalTime;
+		int temp = section1[p].leaveTime - section1[p].arrivalTime;
 		printf("Section %d has student ID: %d%s students, arrival time %d, leave time %d, turn around %d \n",
 				1, section1[p].id, section1[p].priority,section1[p].arrivalTime, section1[p].leaveTime,temp );
 	}
 	printf("---\n");
 	for(p = 0; p < sectionCounts[1]; p++){
-		int temp = section2 -> leaveTime - section2 -> arrivalTime;
+		int temp = section1[p].leaveTime - section1[p].arrivalTime;
 		printf("Section %d has student ID: %d%s students, arrival time %d, leave time %d, turn around %d \n",
 				2, section2[p].id, section2[p].priority,section2[p].arrivalTime, section2[p].leaveTime,temp );
 	}
 	printf("---\n");
 	for(p = 0; p < sectionCounts[2]; p++){
-		int temp = section3 -> leaveTime - section3 -> arrivalTime;
+		int temp = section1[p].leaveTime - section1[p].arrivalTime;
 		printf("Section %d has student ID: %d%s students, arrival time %d, leave time %d, turn around %d \n",
 				3, section3[p].id, section3[p].priority,section3[p].arrivalTime, section3[p].leaveTime,temp );
 	}
