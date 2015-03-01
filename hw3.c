@@ -548,13 +548,13 @@ int main(int argc, char *argv[])
 	}
 	printf("---\n");
 	for(p = 0; p < sectionCounts[1]; p++){
-		int temp = section1[p].leaveTime - section1[p].arrivalTime;
+		int temp = section2[p].leaveTime - section2[p].arrivalTime;
 		printf("Section %d has student ID: %d%s students, arrival time %d, leave time %d, turn around %d \n",
 				2, section2[p].id, section2[p].priority,section2[p].arrivalTime, section2[p].leaveTime,temp );
 	}
 	printf("---\n");
 	for(p = 0; p < sectionCounts[2]; p++){
-		int temp = section1[p].leaveTime - section1[p].arrivalTime;
+		int temp = section3[p].leaveTime - section3[p].arrivalTime;
 		printf("Section %d has student ID: %d%s students, arrival time %d, leave time %d, turn around %d \n",
 				3, section3[p].id, section3[p].priority,section3[p].arrivalTime, section3[p].leaveTime,temp );
 	}
