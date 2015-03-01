@@ -548,6 +548,7 @@ int main(int argc, char *argv[])
 		printf("Student #%d%s was dropped.\n",droppedList[i].id,droppedList[i].priority);
 	}
 
+	printf("student count %d", impatientStudentCount);
 	for(o = 0; o < impatientStudentCount; o++){
 			printf("Student #%d%s was impatient and left.\n",impatientList[i].id,impatientList[i].priority);
 		}
