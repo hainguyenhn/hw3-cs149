@@ -44,7 +44,6 @@ sem_t GsQueueSem;
 sem_t RsQueueSem;
 sem_t EeQueueSem;
 
-struct itimerval profTimer;  // professor's office hour timer
 time_t startTime;
 
 //keep track of number of students in each sections.
