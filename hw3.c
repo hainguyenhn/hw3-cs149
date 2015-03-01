@@ -541,22 +541,22 @@ int main(int argc, char *argv[])
 
 	int o,p;
 	//print number of students per section.
-	for(p = 0; p < sectionCounts[o]; p++){
+	for(p = 0; p < sectionCounts[0]; p++){
 		int temp = section1 -> leaveTime - section1 -> arrivalTime;
 		printf("Section %d has student ID: %d%s students, arrival time %d, leave time %d, turn around %d \n",
-				1, section1[o].id, section1[o].priority,section1[o].arrivalTime, section1[o].leaveTime,temp );
+				1, section1[p].id, section1[p].priority,section1[p].arrivalTime, section1[p].leaveTime,temp );
 	}
 	printf("---\n");
 	for(p = 0; p < sectionCounts[1]; p++){
 		int temp = section2 -> leaveTime - section2 -> arrivalTime;
 		printf("Section %d has student ID: %d%s students, arrival time %d, leave time %d, turn around %d \n",
-				2, section2[o].id, section2[o].priority,section2[o].arrivalTime, section2[o].leaveTime,temp );
+				2, section2[p].id, section2[p].priority,section2[p].arrivalTime, section2[p].leaveTime,temp );
 	}
 	printf("---\n");
 	for(p = 0; p < sectionCounts[2]; p++){
 		int temp = section3 -> leaveTime - section3 -> arrivalTime;
 		printf("Section %d has student ID: %d%s students, arrival time %d, leave time %d, turn around %d \n",
-				3, section3[o].id, section3[o].priority,section3[o].arrivalTime, section3[o].leaveTime,temp );
+				3, section3[p].id, section3[p].priority,section3[p].arrivalTime, section3[p].leaveTime,temp );
 	}
 	printf("---\n");
 
